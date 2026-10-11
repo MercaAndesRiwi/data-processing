@@ -17,7 +17,6 @@ from src.simulators.pos_seed.exchange_rates import (
     load_rate_cache,
 )
 
-
 PAYMENT_METHODS = [
     "cash",
     "credit_card",
@@ -30,9 +29,8 @@ DIGITAL_CHANNELS = (
     "Marketplace Propietario",
 )
 
-
 def load_seasonality_data(connection, start_date, end_date):
-    """Carga los festivos y las promociones del periodo."""
+    """Load the holidays and promotions for the period."""
 
     holidays = connection.execute(
         text("""
@@ -90,26 +88,25 @@ def load_seasonality_data(connection, start_date, end_date):
             promotion_dates[country_code].add(current_date)
             current_date += timedelta(days=1)
 
-    print(f"Festivos cargados: {len(holiday_dates)}")
-    print(f"Promociones consultadas: {len(promotions)}")
+    print(f"Packed holidays: {len(holiday_dates)}")
+    print(f"Promotions viewed: {len(promotions)}")
 
     for country_code in COUNTRIES:
         print(
             f"{country_code}: "
-            f"{len(promotion_dates[country_code])} días promocionales"
+            f"{len(promotion_dates[country_code])} promotional days"
         )
 
     return holiday_dates, promotions, promotion_dates
 
-
 def generate_sale_date( rng, start_date, end_date, country_code, holiday_dates, promotion_dates):
-    """Genera fechas con estacionalidad semanal, festiva y promocional."""
+    """Generates dates with weekly, holiday, and promotional seasonality."""
 
     days = (end_date.date() - start_date.date()).days + 1
 
     if days <= 0:
         raise ValueError(
-            "El rango de fechas debe contener al menos un día."
+            "The date range must contain at least one day."
         )
 
     while True:
@@ -129,8 +126,8 @@ def generate_sale_date( rng, start_date, end_date, country_code, holiday_dates, 
             current_date in promotion_dates.get(country_code, set())
         )
 
-        # Los días normales tienen una probabilidad de aceptación del 55%.
-        # Los fines de semana, festivos y días promocionales se aceptan.
+        # Normal days have a 55% acceptance probability. 
+        # Weekends, holidays, and promotional days are accepted.
         probability = 0.55
 
         if is_weekend or is_holiday or is_promotion:
@@ -139,9 +136,8 @@ def generate_sale_date( rng, start_date, end_date, country_code, holiday_dates, 
         if rng.random() < probability:
             return sale_date
 
-
 def get_catalog(connection, schema_name):
-    """Obtiene las sucursales y los productos del país."""
+    """Retrieves the country's branches and products."""
 
     branches = connection.execute(
         text(f"""
@@ -163,19 +159,18 @@ def get_catalog(connection, schema_name):
 
     if not branches:
         raise ValueError(
-            f"No hay sucursales en el esquema '{schema_name}'."
+            f"There are no branches in the schema. '{schema_name}'."
         )
 
     if not products:
         raise ValueError(
-            f"No hay productos con precios válidos en '{schema_name}'."
+            f"There are no products with valid prices in '{schema_name}'."
         )
 
     return branches, products
 
-
 def has_completed_run( connection, country_code, start_date, end_date):
-    """Comprueba si ya existe el lote para el país y periodo."""
+    """Check if the batch already exists for the country and period."""
 
     result = connection.execute(
         text("""
@@ -198,15 +193,8 @@ def has_completed_run( connection, country_code, start_date, end_date):
 
     return result.scalar_one()
 
-
-def get_active_digital_promotion(
-    promotions,
-    country_code,
-    sku,
-    sale_date,
-    sale_channel,
-):
-    """Busca la promoción digital de mayor descuento aplicable."""
+def get_active_digital_promotion( promotions, country_code, sku, sale_date, sale_channel):
+    """Look for the digital promotion with the highest applicable discount."""
 
     if sale_channel not in DIGITAL_CHANNELS:
         return None
@@ -230,9 +218,8 @@ def get_active_digital_promotion(
         key=lambda promotion: float(promotion["discount_pct"]),
     )
 
-
 def generate_country_sales( connection, country_code, schema_name, quantity, rate_cache, promotions, holiday_dates, promotion_dates):
-    """Genera ventas reproducibles vinculadas a un lote."""
+    """Generates repeatable sales linked to a batch."""
 
     rng = random.Random(f"{SEED}-{country_code}")
 
@@ -244,7 +231,7 @@ def generate_country_sales( connection, country_code, schema_name, quantity, rat
 
     if start_date > end_date:
         raise ValueError(
-            "POS_START_DATE debe ser anterior a POS_END_DATE."
+            "POS_START_DATE must be earlier than POS_END_DATE."
         )
 
     if has_completed_run(
@@ -254,8 +241,8 @@ def generate_country_sales( connection, country_code, schema_name, quantity, rat
         end_date,
     ):
         print(
-            f"{country_code}: el periodo ya existe. "
-            "Se omite para evitar duplicados."
+            f"{country_code}: The period already exists. "
+            "It is omitted to avoid duplicates."
         )
         return
 
@@ -295,7 +282,7 @@ def generate_country_sales( connection, country_code, schema_name, quantity, rat
 
     if run_id is None:
         print(
-            f"{country_code}: el lote ya está registrado. Se omite."
+            f"{country_code}: The batch is already registered. It is skipped."
         )
         return
 
@@ -366,7 +353,7 @@ def generate_country_sales( connection, country_code, schema_name, quantity, rat
             )
         )
 
-        # Aplicar el descuento al precio convertido a moneda local.
+        # Apply the discount to the price converted to local currency.
         if promotion is not None:
             discount_pct = float(promotion["discount_pct"])
 
@@ -375,7 +362,7 @@ def generate_country_sales( connection, country_code, schema_name, quantity, rat
                 2,
             )
 
-        # Defectos artificiales para pruebas de calidad de datos.
+        # Artificial defects for data quality testing.
         if rng.random() < PRICE_DEFECT_RATE:
             unit_price = rng.choice([
                 0,
@@ -439,10 +426,9 @@ def generate_country_sales( connection, country_code, schema_name, quantity, rat
     )
 
     print(
-        f"{country_code}: {quantity} ventas generadas "
+        f"{country_code}: {quantity} sales generated "
         f"(run_id={run_id})."
     )
-
 
 def main():
     quantity = get_sales_per_country()
@@ -453,7 +439,7 @@ def main():
 
     if start_date > end_date:
         raise ValueError(
-            "POS_START_DATE debe ser anterior a POS_END_DATE."
+            "POS_START_DATE must be earlier than POS_END_DATE."
         )
 
     try:
@@ -477,7 +463,7 @@ def main():
                     """)
                 )
 
-                print(f"Generando ventas para {country_code}...")
+                print(f"Generating sales for {country_code}...")
 
                 generate_country_sales(
                     connection,
@@ -492,8 +478,8 @@ def main():
     finally:
         engine.dispose()
 
-    print("Generación de ventas POS finalizada.")
-
+    print("POS sales generation completed.")
 
 if __name__ == "__main__":
     main()
+
