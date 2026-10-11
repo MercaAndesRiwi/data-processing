@@ -26,23 +26,23 @@ Some folders and modules are placeholders for future work. Their presence does n
 
 ```text
 data-processing/
-├── backups/                     
+├── backups/                         # Local database backup; do not commit
 ├── data/
 │   ├── raw/
-│   │   ├── catalog/              
-│   │   └── promotions/           
-│   └── processed/                
+│   │   ├── catalog/                 # Marketplace product catalog workbook
+│   │   └── promotions/              # Weekly promotion workbooks (.xlsx)
+│   └── processed/                   # Reserved for processed datasets
 ├── database/
-│   ├── migrations/               
-│   ├── schemas/pos/schema.sql    
-│   └── seeds/                     
+│   ├── migrations/                  # Placeholder for database migrations
+│   ├── schemas/pos/schema.sql       # POS schemas and shared tables
+│   └── seeds/                       # Placeholder for database seed scripts
 ├── docs/
-│   ├── adr/                      
+│   ├── adr/                         # Architecture Decision Records
 │   ├── architecture/architecture.md
 │   ├── backlog_sprint_1.md
-│   └── bitacora/                  
+│   └── bitacora/                    # Project investigation notes
 ├── infrastructure/docker/
-│   └── docker-compose.yml         
+│   └── docker-compose.yml           # PostgreSQL service
 ├── notebooks/
 │   ├── 01_kaggle_olist_inspection.ipynb
 │   └── 02_pos_eda.ipynb
@@ -51,10 +51,10 @@ data-processing/
 │   │   ├── exchange_rates/main.py
 │   │   ├── holidays/main.py
 │   │   └── promotions/main.py
-│   ├── processing/                
+│   ├── processing/                  # Placeholder
 │   ├── simulators/
-│   │   ├── inventory_api/         
-│   │   ├── marketplace_events/    
+│   │   ├── inventory_api/           # Placeholder
+│   │   ├── marketplace_events/      # Placeholder
 │   │   └── pos_seed/
 │   │       ├── catalog.py
 │   │       ├── config.py
@@ -62,7 +62,7 @@ data-processing/
 │   │       ├── exchange_rates.py
 │   │       ├── holidays.py
 │   │       └── main.py
-│   └── utils/                    
+│   └── utils/                       # Placeholder
 ├── tests/
 │   ├── integration/test_pos_seed.py
 │   └── unit/test_promotions.py
@@ -111,21 +111,21 @@ Set the PostgreSQL connection values in `.env`. The example values are placehold
 
 The POS generator uses these variables:
 
-| Variable                       | Purpose                                                | Example/default               |
-| ------------------------------ | ------------------------------------------------------ | ----------------------------- |
-| `POS_DB_HOST`                | PostgreSQL host                                        | `localhost`                 |
-| `POS_DB_PORT`                | Published PostgreSQL port                              | `5432`                      |
-| `POS_DB_NAME`                | Database name                                          | Configure locally             |
-| `POS_DB_USER`                | Database user                                          | Configure locally             |
-| `POS_DB_PASSWORD`            | Database password                                      | Configure locally             |
-| `POS_SEED`                   | Seed for repeatable generation                         | `42`                        |
-| `POS_MODE`                   | Generation mode:`dev` or `full`                    | `dev`                       |
-| `POS_DEV_SALES_PER_COUNTRY`  | Sales per country in dev mode                          | `100`                       |
-| `POS_FULL_SALES_PER_COUNTRY` | Sales per country in full mode                         | `400000`                    |
-| `POS_PRICE_DEFECT_RATE`      | Artificial invalid-price rate for data-quality testing | `0.005`                     |
-| `POS_SKU_DEFECT_RATE`        | Artificial SKU-defect rate for data-quality testing    | `0.01`                      |
-| `POS_START_DATE`             | First date in the generation period                    | Configure the required period |
-| `POS_END_DATE`               | Last date in the generation period                     | Configure the required period |
+| Variable | Purpose | Example/default |
+|---|---|---|
+| `POS_DB_HOST` | PostgreSQL host | `localhost` |
+| `POS_DB_PORT` | Published PostgreSQL port | `5432` |
+| `POS_DB_NAME` | Database name | Configure locally |
+| `POS_DB_USER` | Database user | Configure locally |
+| `POS_DB_PASSWORD` | Database password | Configure locally |
+| `POS_SEED` | Seed for repeatable generation | `42` |
+| `POS_MODE` | Generation mode: `dev` or `full` | `dev` |
+| `POS_DEV_SALES_PER_COUNTRY` | Sales per country in dev mode | `100` |
+| `POS_FULL_SALES_PER_COUNTRY` | Sales per country in full mode | `400000` |
+| `POS_PRICE_DEFECT_RATE` | Artificial invalid-price rate for data-quality testing | `0.005` |
+| `POS_SKU_DEFECT_RATE` | Artificial SKU-defect rate for data-quality testing | `0.01` |
+| `POS_START_DATE` | First date in the generation period | Configure the required period |
+| `POS_END_DATE` | Last date in the generation period | Configure the required period |
 
 Make sure `POS_START_DATE` and `POS_END_DATE` cover the period you intend to generate. The supplied promotion files are from 2026, so use a matching period when validating those promotions.
 
@@ -180,12 +180,12 @@ uv run python -m src.simulators.pos_seed.main
 The generator supports these operational country schemas:
 
 | Country code | PostgreSQL schema | Currency |
-| ------------ | ----------------- | -------- |
-| `CO`       | `colombia`      | COP      |
-| `PE`       | `peru`          | PEN      |
-| `EC`       | `ecuador`       | USD      |
-| `BO`       | `bolivia`       | BOB      |
-| `CL`       | `chile`         | CLP      |
+|---|---|---|
+| `CO` | `colombia` | COP |
+| `PE` | `peru` | PEN |
+| `EC` | `ecuador` | USD |
+| `BO` | `bolivia` | BOB |
+| `CL` | `chile` | CLP |
 
 In `dev` mode, the default is 100 sales per country. In `full` mode, the default is 400,000 sales per country (2,000,000 across the five countries). Set `POS_MODE` and the relevant sales-count variables in `.env` before running. A completed run with the same country, date range, and seed is skipped to avoid duplicate batches; changing configuration alone will not regenerate that existing batch.
 
@@ -256,209 +256,4 @@ Commit `pyproject.toml` and `uv.lock` together after dependency changes.
 
 - Work on dedicated branches and review changes before merging into the shared development branch.
 - Preserve notebooks and teammates' implementations; coordinate before replacing shared files.
-- Update this README when a component's implementation or execution procedure change
-
-
-# MercaAndes Data Pipeline & Processing
-
-Welcome to the **MercaAndes Data** **Processing** **& Simulation** repository. This repository organizes simulated data source generation, external data ingestion, exploratory data analysis (EDA), and data transformation workflows to support the integration of data into the Silver and Gold layers.
-
----
-
-## Scope & Core Modules
-
-This repository covers four main areas:
-
-### 1. Database Simulation & Data Generation
-
-- **POS Database (F2):** Reproducible generation of simulated point-of-sale data by country.
-- **Inventory API (F3):** Preparation and development of inventory simulation and API consumption components.
-- **Marketplace Events (F4):** Preparation of components for capturing marketplace order events.
-- Generation of test data to evaluate data quality and pipeline robustness.
-
-### 2. Ingestion & Connectors
-
-- **Historical Batch (F1):** Ingestion of the Olist historical dataset.
-- **Inventory API Consumer (F3):** REST client for retrieving inventory data.
-- **Marketplace Consumer (F4):** Components for capturing and processing order events.
-
-### 3. Exploratory Data Analysis (EDA)
-
-Jupyter notebooks will be used to inspect source datasets, assess data quality, identify duplicates, validate schemas, and analyze relevant distributions and metrics.
-
-### 4. Data Processing & Normalization
-
-Planned processing capabilities include:
-
-- Data cleaning and validation.
-- Schema harmonization and timestamp alignment.
-- Personally identifiable information (PII) pseudonymization (RN-11).
-- Net sales calculations according to the project's business rules (RN-01).
-
-These capabilities describe the intended scope. Each component will be implemented and tested incrementally.
-
----
-
-## Project Structure
-
-```text
-data-processing/
-├── config/
-├── backups/
-│   └── mercaandes_backup.dump
-|
-├── data/
-│   ├── raw/
-|   |   ├── catalog/
-|   |   |   └──MercaAndes_catalogo_Marketplace_Completo.xlsx
-|   |   └──promotions/
-│   │   |	├── promociones_2026-41.xlsx
-│   │   |	├── promociones_2026-42.xlsx
-│   │   |	└── promociones_2026-43.xlsx
-│   └── processed/
-├── database/
-│   ├── migrations/
-│   ├── schemas/
-│   │   └── pos/
-│   │   |	└── schema.sql
-│   └── seeds/
-├── docs/
-│   ├── adr/
-│   │   └──ADR-001-estructura-base-y-convenciones.md
-│   ├── architecture/
-│   │   └── architecture.md
-|   ├──bitacora/
-|   |  └──2026-10-02-inspeccion-dataset-kaggle-olist.md
-│   └── baclog_sprint_1.md
-├── infrastructure/
-│   └── docker/
-|   |   └──docker-compose.yml
-├── notebooks/
-│   ├── 01_kaggle_olist_inspection.ipynb
-│   └── 02_pos_eda.ipynb
-├── src/
-│   ├── ingestion/
-│   │   ├── exchanges_rate/
-|   |   |   └──main.py
-│   │   ├── holidays/
-│   │   └── promotions/
-|   |   |   └──main.py
-│   ├── processing/
-│   ├── simulators/
-│   │   ├── inventory_api/
-│   │   ├── marketplace_events/
-│   │   └── pos_seed/
-|   |   |   ├──catalog.py
-|   |   |   ├──config.py
-|   |   |   ├──connection.py
-|   |   |   ├──exchange_rates.py
-|   |   |   ├──holidays.py
-|   |   |   └──main.py
-│   └── utils/
-├── tests/
-│   ├── integration/
-|   |   |   └──test_pos_seed.py
-│   └── unit/
-|   |   |   └──test_promotions.py
-├── .env.example
-├── .gitignore
-├── pyproject.toml
-├── requirements.txt
-├── uv.lock
-└── README.md
-```
-
-Empty directories are placeholders for future components. Their presence does not imply that the corresponding functionality has already been implemented.
-
----
-
-## Prerequisites
-
-- Python 3.13 or a compatible version supported by `pyproject.toml`.
-- [uv](https://docs.astral.sh/uv/) for Python dependency and virtual environment management.
-- Git for version control.
-
-Docker will be used when containerized services are introduced.
-
----
-
-## Local Development Setup
-
-From the repository root, run:
-
-```powershell
-uv sync --locked
-```
-
-This synchronizes the local environment with the dependencies declared in `pyproject.toml` and the versions recorded in `uv.lock`.
-
-Verify the environment:
-
-```powershell
-uv run python --version
-uv run pytest --version
-uv run ruff --version
-```
-
-To launch JupyterLab:
-
-```powershell
-uv run jupyter lab
-```
-
-The `.venv/` directory is managed locally and must not be committed to Git.
-
----
-
-## Configuration & Local Data
-
-The `.env.example` file documents example environment variables. When a component requires local configuration, create a `.env` file containing the appropriate values.
-
-Never commit real passwords, access tokens, or other secrets.
-
----
-
-## Testing & Code Quality
-
-Run the available tests:
-
-```powershell
-uv run pytest
-```
-
-Check Python code quality:
-
-```powershell
-uv run ruff check
-```
-
----
-
-## Dependency Management
-
-- `pyproject.toml` declares the project's direct dependencies and development tools.
-- `uv.lock` records the resolved dependency versions to support reproducible environments.
-- `requirements.txt` is retained temporarily while the team reviews its removal and checks for any remaining dependencies on that file.
-
-Use `uv` for new dependency changes. For example:
-
-```powershell
-uv add package-name
-```
-
-For development-only tools:
-
-```powershell
-uv add --dev package-name
-```
-
-After changing dependencies, commit the updated `pyproject.toml` and `uv.lock` together.
-
----
-
-## Collaboration Guidelines
-
-- Work on dedicated branches and review changes before merging them into the shared development branch.
-- Preserve existing notebooks and teammates' implementations.
-- Avoid overwriting shared files without coordinating with their owners.
-- Update this README as components are implemented and validate
+- Update this README when a component's implementation or execution procedure changes.
