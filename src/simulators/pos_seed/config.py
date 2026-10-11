@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 COUNTRIES = {
     "CO": "colombia",
@@ -9,7 +10,21 @@ COUNTRIES = {
     "CL": "chile",
 }
 
+
+CURRENCIES = {
+    "CO": "COP",
+    "PE": "PEN",
+    "EC": "USD",
+    "BO": "BOB",
+    "CL": "CLP",
+}
+
+load_dotenv()
+
 SEED = int(os.getenv("POS_SEED", "42"))
+# POS sales date range
+POS_START_DATE = os.getenv("POS_START_DATE", "2025-01-01")
+POS_END_DATE = os.getenv("POS_END_DATE", "2025-12-31")
 
 # POS data generation configuration
 POS_MODE = os.getenv("POS_MODE", "dev").lower()

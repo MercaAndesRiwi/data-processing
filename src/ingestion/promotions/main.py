@@ -182,5 +182,6 @@ def main():
     print(f"Total skipped: {total_validated - total_inserted}")
 
 
+
 if __name__ == "__main__":
     main()

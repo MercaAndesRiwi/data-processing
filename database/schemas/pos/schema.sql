@@ -8,7 +8,6 @@ CREATE SCHEMA IF NOT EXISTS chile;
 
 -- POS tables for each country
 
-
 DO $$
 DECLARE
     country_schema TEXT;
@@ -46,6 +45,7 @@ BEGIN
                 product_category_id INTEGER NOT NULL,
                 sku VARCHAR(50) NOT NULL UNIQUE,
                 name VARCHAR(150) NOT NULL,
+                base_price_usd NUMERIC(12, 2),
 
                 CONSTRAINT fk_product_category
                     FOREIGN KEY (product_category_id)
@@ -59,6 +59,7 @@ BEGIN
                 sale_at TIMESTAMP NOT NULL,
                 branch_id BIGINT NOT NULL,
                 payment_method VARCHAR(50) NOT NULL,
+                currency_code VARCHAR(3) NOT NULL DEFAULT 'USD',
 
                 CONSTRAINT fk_sale_branch
                     FOREIGN KEY (branch_id)
@@ -107,3 +108,35 @@ CREATE TABLE IF NOT EXISTS public.promotions (
     CONSTRAINT chk_promotions_dates
         CHECK (end_date >= start_date)
 );
+
+
+CREATE TABLE IF NOT EXISTS public.exchange_rate (
+    rate_date DATE NOT NULL,
+    base_currency_code VARCHAR(3) NOT NULL,
+    quote_currency_code VARCHAR(3) NOT NULL,
+    rate NUMERIC(18, 8) NOT NULL CHECK (rate > 0),
+    source VARCHAR(50) NOT NULL DEFAULT 'Frankfurter',
+    PRIMARY KEY (
+        rate_date,
+        base_currency_code,
+        quote_currency_code
+    )
+);
+
+
+CREATE TABLE IF NOT EXISTS public.pos_seed_runs (
+    run_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    country_code VARCHAR(2) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    seed BIGINT NOT NULL,
+    sales_count INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_pos_seed_run_dates
+        CHECK (end_date >= start_date),
+
+    CONSTRAINT uq_pos_seed_run
+        UNIQUE (country_code, start_date, end_date, seed)
+);
+
