@@ -25,24 +25,23 @@ Some folders and modules are placeholders for future work. Their presence does n
 ## Project structure
 
 ```text
-data-processing/
-├── backups/                         # Local database backup; do not commit
+data-processing/                      
 ├── data/
 │   ├── raw/
-│   │   ├── catalog/                 # Marketplace product catalog workbook
-│   │   └── promotions/              # Weekly promotion workbooks (.xlsx)
-│   └── processed/                   # Reserved for processed datasets
+│   │   ├── catalog/                 
+│   │   └── promotions/             
+│   └── processed/                   
 ├── database/
-│   ├── migrations/                  # Placeholder for database migrations
-│   ├── schemas/pos/schema.sql       # POS schemas and shared tables
-│   └── seeds/                       # Placeholder for database seed scripts
+│   ├── migrations/               
+│   ├── schemas/pos/schema.sql     
+│   └── seeds/                     
 ├── docs/
-│   ├── adr/                         # Architecture Decision Records
+│   ├── adr/                        
 │   ├── architecture/architecture.md
 │   ├── backlog_sprint_1.md
-│   └── bitacora/                    # Project investigation notes
+│   └── bitacora/                 
 ├── infrastructure/docker/
-│   └── docker-compose.yml           # PostgreSQL service
+│   └── docker-compose.yml       
 ├── notebooks/
 │   ├── 01_kaggle_olist_inspection.ipynb
 │   └── 02_pos_eda.ipynb
@@ -51,10 +50,10 @@ data-processing/
 │   │   ├── exchange_rates/main.py
 │   │   ├── holidays/main.py
 │   │   └── promotions/main.py
-│   ├── processing/                  # Placeholder
+│   ├── processing/                
 │   ├── simulators/
-│   │   ├── inventory_api/           # Placeholder
-│   │   ├── marketplace_events/      # Placeholder
+│   │   ├── inventory_api/         
+│   │   ├── marketplace_events/    
 │   │   └── pos_seed/
 │   │       ├── catalog.py
 │   │       ├── config.py
@@ -62,7 +61,7 @@ data-processing/
 │   │       ├── exchange_rates.py
 │   │       ├── holidays.py
 │   │       └── main.py
-│   └── utils/                       # Placeholder
+│   └── utils/                    
 ├── tests/
 │   ├── integration/test_pos_seed.py
 │   └── unit/test_promotions.py
