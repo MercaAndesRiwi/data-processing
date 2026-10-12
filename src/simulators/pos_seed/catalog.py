@@ -1,103 +1,36 @@
-from openpyxl import load_workbook
 from sqlalchemy import text
 
+from src.common.master_catalog import build_master_catalog
+from src.simulators.pos_seed.config import COUNTRIES, SEED
 from src.simulators.pos_seed.connection import get_engine
-from src.simulators.pos_seed.config import COUNTRIES, PROJECT_ROOT
-
-
-CATALOG_FILE = (
-    PROJECT_ROOT
-    / "data"
-    / "raw"
-    / "catalog"
-    / "MercaAndes_Catalogo_Marketplace_Completo.xlsx"
-)
 
 
 def load_catalog():
-    """Read active products and their base USD prices from the master catalog."""
-    if not CATALOG_FILE.exists():
-        raise FileNotFoundError(
-            f"Master catalog not found: {CATALOG_FILE}"
+    """Build active products and base USD prices from the seeded catalog.
+
+    Replaces the Excel workbook source (gitignored, absent in CI) with
+    the deterministic master catalog so POS shares SKUs with F3/F4.
+    Return shape is unchanged: ``{country_code: [product dicts]}``.
+    """
+    catalog = build_master_catalog(seed=SEED)
+
+    products_by_country = {code: [] for code in COUNTRIES}
+
+    for product in catalog.products:
+        if product.status.lower() not in {"activo", "active"}:
+            continue
+        if product.country not in products_by_country:
+            continue
+        products_by_country[product.country].append(
+            {
+                "sku": product.sku,
+                "name": product.name,
+                "category": product.category,
+                "base_price_usd": product.base_price_usd,
+            }
         )
 
-    workbook = load_workbook(
-        CATALOG_FILE,
-        read_only=True,
-        data_only=True,
-    )
-
-    try:
-        rows = workbook.active.iter_rows(values_only=True)
-        headers = next(rows)
-        indexes = {name: i for i, name in enumerate(headers)}
-
-        required_columns = {
-            "SKU_ID",
-            "Nombre_Producto",
-            "Categoría",
-            "País",
-            "Estado",
-            "Precio_Base_USD",
-        }
-
-        missing = required_columns - indexes.keys()
-        if missing:
-            raise ValueError(
-                f"Missing catalog columns: {sorted(missing)}"
-            )
-
-        products_by_country = {code: [] for code in COUNTRIES}
-
-        for row in rows:
-            if not row or not row[indexes["SKU_ID"]]:
-                continue
-
-            country = str(row[indexes["País"]]).strip().upper()
-            status = str(row[indexes["Estado"]]).strip().lower()
-
-            # The POS simulator only operates in the five active countries.
-            if country not in COUNTRIES:
-                continue
-
-            if status not in {"activo", "active"}:
-                continue
-
-            sku = str(row[indexes["SKU_ID"]]).strip()
-            name = str(row[indexes["Nombre_Producto"]]).strip()
-            category = str(row[indexes["Categoría"]]).strip()
-            raw_price = row[indexes["Precio_Base_USD"]]
-
-            if not name or not category:
-                raise ValueError(
-                    f"Product {sku} has no name or category."
-                )
-
-            if raw_price is None:
-                raise ValueError(
-                    f"Product {sku} has no base USD price."
-                )
-
-            base_price_usd = float(raw_price)
-
-            if base_price_usd <= 0:
-                raise ValueError(
-                    f"Product {sku} has an invalid base USD price."
-                )
-
-            products_by_country[country].append(
-                {
-                    "sku": sku,
-                    "name": name,
-                    "category": category,
-                    "base_price_usd": base_price_usd,
-                }
-            )
-
-        return products_by_country
-
-    finally:
-        workbook.close()
+    return products_by_country
 
 
 def create_catalogs():

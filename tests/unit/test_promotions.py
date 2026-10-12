@@ -1,7 +1,8 @@
 from datetime import datetime
-from pathlib import Path
+
 import pytest
 from openpyxl import Workbook
+
 from src.ingestion.promotions.main import read_promotions
 
 

@@ -8,7 +8,11 @@ Some folders and modules are placeholders for future work. Their presence does n
 
 ### Implemented components
 
-- **POS sales simulator (F2 / HU-1.3):** generates reproducible point-of-sale sales and sale items for Colombia, Peru, Ecuador, Bolivia, and Chile. Supports `dev` and `full` modes, configurable seed and date range, links generated records to a run, and skips an already-registered run with the same country, period, and seed.
+- **Seeded master catalog (`src/common/master_catalog.py`):** deterministic products, sellers and stores from `MASTER_SEED` (default 71 x 15 = 1065 products, 35 sellers, 20 stores). Single ID space shared by POS (F2), inventory (F3) and marketplace events (F4). Replaces the gitignored Excel workbook, which is no longer required.
+- **POS sales simulator (F2 / HU-1.3):** generates reproducible point-of-sale sales and sale items for Colombia, Peru, Ecuador, Bolivia, and Chile. Supports `dev` and `full` modes, configurable seed and date range, links generated records to a run, and skips an already-registered run with the same country, period, and seed. Product data comes from the seeded catalog.
+- **Marketplace event producer (F4):** seeded order lifecycle `created -> paid -> shipped -> delivered / cancelled / returned` with the post-dispatch rule (cancel from shipped yields returned), configurable duplicate injection by `event_id` and out-of-order delivery capped at 6 hours. Peak mode exceeds 20 events/second; see `docs/bitacora/2026-10-12-throughput-marketplace.md`.
+- **Inventory helper (F3):** deterministic `stock_level(seed, sku, store_id)` from the same catalog IDs.
+- **Database migrations (Alembic):** `database/migrations/versions/0001_baseline.py` freezes the current `schema.sql`. Structure is versioned with `alembic upgrade head`; seeds always run afterwards and never delete data.
 - **Exchange-rate ingestion:** retrieves historical USD exchange rates from the Frankfurter API and stores them in `public.exchange_rate`.
 - **Holiday ingestion:** retrieves public holidays from the Nager.Date API for the five operational countries and stores them in `public.holidays`.
 - **Promotion ingestion:** reads weekly Excel files from `data/raw/promotions/`, validates their columns and values, and inserts promotions into `public.promotions` while skipping duplicate records.
@@ -17,8 +21,8 @@ Some folders and modules are placeholders for future work. Their presence does n
 
 ### Planned or not yet implemented
 
-- Inventory API simulator and consumer (F3).
-- Marketplace order-event simulator and consumer (F4).
+- Inventory API simulator HTTP service and F3 poll consumer (helper exists).
+- Marketplace Kafka consumer with watermark 6h and `MERGE` on `order_id`.
 - General-purpose Silver/Gold transformations, PII pseudonymization (RN-11), and net-sales calculations (RN-01).
 - The `src/processing/`, `src/utils/`, `database/migrations/`, and `database/seeds/` areas do not yet contain complete implementations.
 
@@ -33,39 +37,45 @@ data-processing/
 │   │   └── promotions/              # Weekly promotion workbooks (.xlsx)
 │   └── processed/                   # Reserved for processed datasets
 ├── database/
-│   ├── migrations/                  # Placeholder for database migrations
-│   ├── schemas/pos/schema.sql       # POS schemas and shared tables
+│   ├── migrations/                  # Alembic env + versions (0001_baseline)
+│   ├── schemas/pos/schema.sql       # Frozen baseline source for 0001
 │   └── seeds/                       # Placeholder for database seed scripts
 ├── docs/
 │   ├── adr/                         # Architecture Decision Records
 │   ├── architecture/architecture.md
 │   ├── backlog_sprint_1.md
 │   └── bitacora/                    # Project investigation notes
+│       └── 2026-10-12-throughput-marketplace.md
 ├── infrastructure/docker/
 │   └── docker-compose.yml           # PostgreSQL service
 ├── notebooks/
 │   ├── 01_kaggle_olist_inspection.ipynb
 │   └── 02_pos_eda.ipynb
 ├── src/
+│   ├── common/
+│   │   ├── config.py                # MASTER_SEED, countries, catalog sizing
+│   │   ├── db.py                    # Single SQLAlchemy engine factory
+│   │   └── master_catalog.py        # Seeded products/sellers/stores
 │   ├── ingestion/
 │   │   ├── exchange_rates/main.py
 │   │   ├── holidays/main.py
 │   │   └── promotions/main.py
 │   ├── processing/                  # Placeholder
 │   ├── simulators/
-│   │   ├── inventory_api/           # Placeholder
-│   │   ├── marketplace_events/      # Placeholder
+│   │   ├── inventory_api/           # stock.py deterministic helper
+│   │   ├── marketplace_events/      # lifecycle.py, faults.py, producer.py
 │   │   └── pos_seed/
-│   │       ├── catalog.py
+│   │       ├── catalog.py           # Loads DB catalog from seeded data
 │   │       ├── config.py
 │   │       ├── connection.py
 │   │       ├── exchange_rates.py
-│   │       ├── holidays.py
 │   │       └── main.py
 │   └── utils/                       # Placeholder
 ├── tests/
 │   ├── integration/test_pos_seed.py
-│   └── unit/test_promotions.py
+│   └── unit/                        # 21 tests: promotions, catalog,
+│                                    # lifecycle, faults, throughput, inventory
+├── alembic.ini
 ├── .env.example
 ├── .gitignore
 ├── pyproject.toml
@@ -111,81 +121,82 @@ Set the PostgreSQL connection values in `.env`. The example values are placehold
 
 The POS generator uses these variables:
 
-| Variable | Purpose | Example/default |
-|---|---|---|
-| `POS_DB_HOST` | PostgreSQL host | `localhost` |
-| `POS_DB_PORT` | Published PostgreSQL port | `5432` |
-| `POS_DB_NAME` | Database name | Configure locally |
-| `POS_DB_USER` | Database user | Configure locally |
-| `POS_DB_PASSWORD` | Database password | Configure locally |
-| `POS_SEED` | Seed for repeatable generation | `42` |
-| `POS_MODE` | Generation mode: `dev` or `full` | `dev` |
-| `POS_DEV_SALES_PER_COUNTRY` | Sales per country in dev mode | `100` |
-| `POS_FULL_SALES_PER_COUNTRY` | Sales per country in full mode | `400000` |
-| `POS_PRICE_DEFECT_RATE` | Artificial invalid-price rate for data-quality testing | `0.005` |
-| `POS_SKU_DEFECT_RATE` | Artificial SKU-defect rate for data-quality testing | `0.01` |
-| `POS_START_DATE` | First date in the generation period | Configure the required period |
-| `POS_END_DATE` | Last date in the generation period | Configure the required period |
+| Variable                       | Purpose                                                | Example/default               |
+| ------------------------------ | ------------------------------------------------------ | ----------------------------- |
+| `POS_DB_HOST`                | PostgreSQL host                                        | `localhost`                 |
+| `POS_DB_PORT`                | Published PostgreSQL port                              | `5432`                      |
+| `POS_DB_NAME`                | Database name                                          | Configure locally             |
+| `POS_DB_USER`                | Database user                                          | Configure locally             |
+| `POS_DB_PASSWORD`            | Database password                                      | Configure locally             |
+| `POS_SEED`                   | Seed for repeatable generation                         | `42`                        |
+| `POS_MODE`                   | Generation mode:`dev` or `full`                    | `dev`                       |
+| `POS_DEV_SALES_PER_COUNTRY`  | Sales per country in dev mode                          | `100`                       |
+| `POS_FULL_SALES_PER_COUNTRY` | Sales per country in full mode                         | `400000`                    |
+| `POS_PRICE_DEFECT_RATE`      | Artificial invalid-price rate for data-quality testing | `0.005`                     |
+| `POS_SKU_DEFECT_RATE`        | Artificial SKU-defect rate for data-quality testing    | `0.01`                      |
+| `POS_START_DATE`             | First date in the generation period                    | Configure the required period |
+| `POS_END_DATE`               | Last date in the generation period                     | Configure the required period |
+| `MASTER_SEED`                | Shared seed for catalog, POS, inventory, events        | `42`                        |
+| `CATALOG_PER_CATEGORY`       | Products per category (71 x N)                         | `15`                        |
+| `CATALOG_ACTIVE_RATE`        | Fraction of catalog marked Activo                      | `0.95`                      |
+| `F4_DUPLICATE_RATE`          | Duplicate-event injection rate                         | `0.0`                       |
+| `F4_OOO_ENABLED`             | Out-of-order delivery toggle                           | `false`                     |
+| `F4_OOO_MAX_LAG_SEC`         | Max arrival lag seconds (cap 21600 = 6h)               | `21600`                     |
 
 Make sure `POS_START_DATE` and `POS_END_DATE` cover the period you intend to generate. The supplied promotion files are from 2026, so use a matching period when validating those promotions.
 
-### 3. Start PostgreSQL
+### 3. Start PostgreSQL (once)
 
 ```powershell
-docker compose -f infrastructure/docker/docker-compose.yml up -d
+docker compose --env-file .env -f infrastructure/docker/docker-compose.yml up -d
+uv run python -m src.simulators.pos_seed.connection
 ```
 
-The Compose service uses PostgreSQL 16 and persists data in the `pos_data` Docker volume. The `database/schemas/pos/schema.sql` initialization script is automatically applied only when PostgreSQL initializes a **new, empty** data volume. If the volume already exists, changing the SQL file will not automatically recreate the database.
+The Compose service uses PostgreSQL 16 and persists data in the `pos_data` Docker volume. The init script applies only on a **new, empty** volume; day to day, structure is managed with `alembic upgrade head` (no data loss).
 
-The POS generator expects country schemas and catalog data to be present before generation. The schema script creates the POS tables, but catalog loading must be handled separately with the available project data/process agreed by the team.
+## Execution step by step
 
-## Running ingestion and simulation
-
-Run commands from the repository root.
-
-### Load exchange rates
+From the repository root, in this order. Seeds never delete data.
 
 ```powershell
+uv run alembic upgrade head
 uv run python -m src.ingestion.exchange_rates.main
-```
-
-This retrieves historical USD exchange rates for the currencies used by the operational countries and writes them to `public.exchange_rate`.
-
-### Load public holidays
-
-```powershell
 uv run python -m src.ingestion.holidays.main
-```
-
-The current script requests holidays for 2026 for Colombia, Peru, Ecuador, Bolivia, and Chile, and writes them to `public.holidays`.
-
-### Load weekly promotions
-
-Place the weekly promotion `.xlsx` files in `data/raw/promotions/`, then run:
-
-```powershell
 uv run python -m src.ingestion.promotions.main
-```
-
-The workbook must use these exact columns: `sku`, `tienda_o_canal`, `descuento_pct`, `fecha_inicio`, and `fecha_fin`. The script validates records and skips promotion records that already exist in the database.
-
-### Generate POS sales
-
-First confirm that the database has the required country schemas, branches, products, exchange rates, holidays, and promotions for the configured date range. Then run:
-
-```powershell
+uv run python -m src.simulators.pos_seed.catalog
 uv run python -m src.simulators.pos_seed.main
+uv run python -m src.simulators.marketplace_events.producer --orders 100
+uv run pytest tests/unit
 ```
+
+### What each step does (no extra commands)
+
+1. **Structure without data loss:** versioned migrations (`0001_baseline`
+   freezes `schema.sql`). Check with `alembic current` (`0001 (head)`).
+   New tables go in `0002_*`, never editing `schema.sql` by hand.
+2. **Exchange rates:** fills `public.exchange_rate`. Required before POS.
+3. **Holidays:** fills `public.holidays` 2026 (5 countries) for seasonality.
+4. **Promotions:** place `.xlsx` in `data/raw/promotions/` first. Columns
+   `sku, tienda_o_canal, descuento_pct, fecha_inicio, fecha_fin`.
+   Skips existing records.
+5. **Catalog:** builds products from `MASTER_SEED`, upserts categories and
+   active products per country. Idempotent via `ON CONFLICT (sku)`.
+6. **POS sales:** needs schemas, branches, products, rates, holidays and
+   promos for the configured period. Skips completed
+   (country, period, seed) runs. `dev` 100/country, `full` 400k/country.
+7. **Marketplace events (no DB):** IDs from the same seeded catalog.
+   Faults via flags in the order block (`--duplicate-rate`, `--ooo`).
+   Evidence: `docs/bitacora/2026-10-12-throughput-marketplace.md`.
 
 The generator supports these operational country schemas:
 
 | Country code | PostgreSQL schema | Currency |
-|---|---|---|
-| `CO` | `colombia` | COP |
-| `PE` | `peru` | PEN |
-| `EC` | `ecuador` | USD |
-| `BO` | `bolivia` | BOB |
-| `CL` | `chile` | CLP |
+| ------------ | ----------------- | -------- |
+| `CO`       | `colombia`      | COP      |
+| `PE`       | `peru`          | PEN      |
+| `EC`       | `ecuador`       | USD      |
+| `BO`       | `bolivia`       | BOB      |
+| `CL`       | `chile`         | CLP      |
 
 In `dev` mode, the default is 100 sales per country. In `full` mode, the default is 400,000 sales per country (2,000,000 across the five countries). Set `POS_MODE` and the relevant sales-count variables in `.env` before running. A completed run with the same country, date range, and seed is skipped to avoid duplicate batches; changing configuration alone will not regenerate that existing batch.
 
@@ -193,7 +204,7 @@ The simulator adjusts date selection to favor weekends, public holidays, and pro
 
 ## Tests and code quality
 
-Run unit tests:
+Run unit tests (21 tests: promotions, master catalog, lifecycle, faults, throughput, inventory):
 
 ```powershell
 uv run pytest tests/unit

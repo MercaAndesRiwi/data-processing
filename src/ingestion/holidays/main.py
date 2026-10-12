@@ -1,9 +1,10 @@
 import json
 from datetime import date
 from urllib.request import Request, urlopen
-from src.simulators.pos_seed.connection import get_engine
+
 from sqlalchemy import text
 
+from src.simulators.pos_seed.connection import get_engine
 
 API_URL = "https://nagerholidays.com/api/v4/Holidays"
 

@@ -2,12 +2,12 @@ import json
 from datetime import date
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import urlopen, Request
+from urllib.request import Request, urlopen
+
 from sqlalchemy import text
-from src.simulators.pos_seed.connection import get_engine
+
 from src.simulators.pos_seed.config import CURRENCIES
-
-
+from src.simulators.pos_seed.connection import get_engine
 
 API_URL = "https://api.frankfurter.dev/v2/rates"
 START_DATE = date(2025, 1, 1)
