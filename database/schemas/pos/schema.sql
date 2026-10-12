@@ -6,7 +6,54 @@ CREATE SCHEMA IF NOT EXISTS bolivia;
 CREATE SCHEMA IF NOT EXISTS chile;
 
 
--- POS tables for each country
+-- Shared public tables
+
+CREATE TABLE IF NOT EXISTS public.pos_seed_runs (
+    run_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    country_code VARCHAR(2) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    seed BIGINT NOT NULL,
+    sales_count INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_pos_seed_run_dates
+        CHECK (end_date >= start_date),
+
+    CONSTRAINT uq_pos_seed_run
+        UNIQUE (country_code, start_date, end_date, seed)
+);
+
+CREATE TABLE IF NOT EXISTS public.promotions (
+    promotion_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    sku VARCHAR(50) NOT NULL,
+    store_or_channel VARCHAR(100) NOT NULL,
+    discount_pct NUMERIC(5,2) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+
+    CONSTRAINT chk_promotions_discount
+        CHECK (discount_pct > 0 AND discount_pct <= 100),
+
+    CONSTRAINT chk_promotions_dates
+        CHECK (end_date >= start_date)
+);
+
+CREATE TABLE IF NOT EXISTS public.exchange_rate (
+    rate_date DATE NOT NULL,
+    base_currency_code VARCHAR(3) NOT NULL,
+    quote_currency_code VARCHAR(3) NOT NULL,
+    rate NUMERIC(18, 8) NOT NULL CHECK (rate > 0),
+    source VARCHAR(50) NOT NULL DEFAULT 'Frankfurter',
+    PRIMARY KEY (
+        rate_date,
+        base_currency_code,
+        quote_currency_code
+    )
+);
+
+
+-- POS tables and default seed data for each country
 
 DO $$
 DECLARE
@@ -59,12 +106,17 @@ BEGIN
                 sale_at TIMESTAMP NOT NULL,
                 branch_id BIGINT NOT NULL,
                 payment_method VARCHAR(50) NOT NULL,
-                currency_code VARCHAR(3) NOT NULL DEFAULT 'USD',
+                currency_code VARCHAR(3) NOT NULL DEFAULT ''USD'',
+                run_id BIGINT,
 
                 CONSTRAINT fk_sale_branch
                     FOREIGN KEY (branch_id)
-                    REFERENCES %I.branch(branch_id)
-            )', country_schema, country_schema);
+                    REFERENCES %I.branch(branch_id),
+
+                CONSTRAINT fk_sale_run
+                    FOREIGN KEY (run_id)
+                    REFERENCES public.pos_seed_runs(run_id)
+            )', country_schema, country_schema, country_schema);
 
         -- Sales line items
         EXECUTE format('
@@ -88,55 +140,15 @@ BEGIN
                     CHECK (quantity > 0)
             )', country_schema, country_schema, country_schema);
 
+        -- Seed initial branches for each country
+        EXECUTE format('
+            INSERT INTO %I.branch (branch_id, name, city, state, branch_zip_code)
+            VALUES 
+                (1, ''Tienda Principal'', ''Capital'', ''Region Central'', ''00001''),
+                (2, ''Tienda Norte'', ''Norte'', ''Region Norte'', ''00002''),
+                (3, ''Tienda Sur'', ''Sur'', ''Region Sur'', ''00003'')
+            ON CONFLICT (branch_id) DO NOTHING;
+        ', country_schema);
+
     END LOOP;
 END $$;
-
-
--- Weekly promotions ingestion destination
-
-CREATE TABLE IF NOT EXISTS public.promotions (
-    promotion_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    sku VARCHAR(50) NOT NULL,
-    store_or_channel VARCHAR(100) NOT NULL,
-    discount_pct NUMERIC(5,2) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-
-    CONSTRAINT chk_promotions_discount
-        CHECK (discount_pct > 0 AND discount_pct <= 100),
-
-    CONSTRAINT chk_promotions_dates
-        CHECK (end_date >= start_date)
-);
-
-
-CREATE TABLE IF NOT EXISTS public.exchange_rate (
-    rate_date DATE NOT NULL,
-    base_currency_code VARCHAR(3) NOT NULL,
-    quote_currency_code VARCHAR(3) NOT NULL,
-    rate NUMERIC(18, 8) NOT NULL CHECK (rate > 0),
-    source VARCHAR(50) NOT NULL DEFAULT 'Frankfurter',
-    PRIMARY KEY (
-        rate_date,
-        base_currency_code,
-        quote_currency_code
-    )
-);
-
-
-CREATE TABLE IF NOT EXISTS public.pos_seed_runs (
-    run_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    country_code VARCHAR(2) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    seed BIGINT NOT NULL,
-    sales_count INTEGER NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT chk_pos_seed_run_dates
-        CHECK (end_date >= start_date),
-
-    CONSTRAINT uq_pos_seed_run
-        UNIQUE (country_code, start_date, end_date, seed)
-);
-

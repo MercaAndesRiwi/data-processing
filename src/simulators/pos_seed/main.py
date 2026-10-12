@@ -1,15 +1,17 @@
 import random
 from datetime import datetime, timedelta
+
 from sqlalchemy import text
+
 from src.simulators.pos_seed.config import (
     COUNTRIES,
-    SEED,
+    CURRENCIES,
+    POS_END_DATE,
+    POS_START_DATE,
     PRICE_DEFECT_RATE,
+    SEED,
     SKU_DEFECT_RATE,
     get_sales_per_country,
-    CURRENCIES,
-    POS_START_DATE,
-    POS_END_DATE,
 )
 from src.simulators.pos_seed.connection import get_engine
 from src.simulators.pos_seed.exchange_rates import (

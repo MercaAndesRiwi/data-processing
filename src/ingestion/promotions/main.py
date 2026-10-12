@@ -1,8 +1,9 @@
 from pathlib import Path
+
 from openpyxl import load_workbook
 from sqlalchemy import text
-from src.simulators.pos_seed.connection import get_engine
 
+from src.simulators.pos_seed.connection import get_engine
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 PROMOTIONS_DIR = PROJECT_ROOT / "data" / "raw" / "promotions"
