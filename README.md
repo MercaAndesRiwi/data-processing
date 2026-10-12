@@ -29,25 +29,24 @@ Some folders and modules are placeholders for future work. Their presence does n
 ## Project structure
 
 ```text
-data-processing/
-├── backups/                         # Local database backup; do not commit
+data-processing/                      
 ├── data/
 │   ├── raw/
-│   │   ├── catalog/                 # Marketplace product catalog workbook
-│   │   └── promotions/              # Weekly promotion workbooks (.xlsx)
-│   └── processed/                   # Reserved for processed datasets
+│   │   ├── catalog/                 
+│   │   └── promotions/             
+│   └── processed/                   
 ├── database/
 │   ├── migrations/                  # Alembic env + versions (0001_baseline)
 │   ├── schemas/pos/schema.sql       # Frozen baseline source for 0001
 │   └── seeds/                       # Placeholder for database seed scripts
 ├── docs/
-│   ├── adr/                         # Architecture Decision Records
+│   ├── adr/                        
 │   ├── architecture/architecture.md
 │   ├── backlog_sprint_1.md
 │   └── bitacora/                    # Project investigation notes
 │       └── 2026-10-12-throughput-marketplace.md
 ├── infrastructure/docker/
-│   └── docker-compose.yml           # PostgreSQL service
+│   └── docker-compose.yml       
 ├── notebooks/
 │   ├── 01_kaggle_olist_inspection.ipynb
 │   └── 02_pos_eda.ipynb
@@ -60,7 +59,7 @@ data-processing/
 │   │   ├── exchange_rates/main.py
 │   │   ├── holidays/main.py
 │   │   └── promotions/main.py
-│   ├── processing/                  # Placeholder
+│   ├── processing/                
 │   ├── simulators/
 │   │   ├── inventory_api/           # stock.py deterministic helper
 │   │   ├── marketplace_events/      # lifecycle.py, faults.py, producer.py
@@ -70,7 +69,7 @@ data-processing/
 │   │       ├── connection.py
 │   │       ├── exchange_rates.py
 │   │       └── main.py
-│   └── utils/                       # Placeholder
+│   └── utils/                    
 ├── tests/
 │   ├── integration/test_pos_seed.py
 │   └── unit/                        # 21 tests: promotions, catalog,
