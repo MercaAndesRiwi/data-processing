@@ -13,11 +13,11 @@ def get_engine():
     """Create and return a SQLAlchemy engine."""
     database_url = URL.create(
         drivername="postgresql+psycopg",
-        username=os.getenv("POS_DB_USER"),
-        password=os.getenv("POS_DB_PASSWORD"),
-        host=os.getenv("POS_DB_HOST", "localhost"),
-        port=int(os.getenv("POS_DB_PORT", "5432")),
-        database=os.getenv("POS_DB_NAME"),
+        username=(os.getenv("POS_DB_USER") or "").strip(),
+        password=(os.getenv("POS_DB_PASSWORD") or "").strip(),
+        host=(os.getenv("POS_DB_HOST", "localhost") or "").strip(),
+        port=int((os.getenv("POS_DB_PORT", "5432") or "5432").strip()),
+        database=(os.getenv("POS_DB_NAME") or "").strip(),
     )
 
     return create_engine(database_url)
