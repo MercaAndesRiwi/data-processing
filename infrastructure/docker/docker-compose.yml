@@ -6,15 +6,13 @@ services:
     restart: unless-stopped
     env_file:
       - ../../.env
-    environment:
-      POSTGRES_DB: ${POS_DB_NAME}
-      POSTGRES_USER: ${POS_DB_USER}
-      POSTGRES_PASSWORD: ${POS_DB_PASSWORD}
     ports:
       - "${POS_DB_PORT:-5432}:5432"
     volumes:
       - pos_data:/var/lib/postgresql/data
       - ../../database/schemas/pos/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./entrypoint-sync.sh:/usr/local/bin/entrypoint-sync.sh:ro
+    entrypoint: ["bash", "/usr/local/bin/entrypoint-sync.sh", "postgres"]
 
 volumes:
   pos_data:

@@ -1,4 +1,3 @@
-
 # MercaAndes Data Pipeline & Processing
 
 Repository for the data-ingestion, simulation, exploration, and processing components of **MercaAndes Omnicanal**. The repository currently contains the POS sales simulator, ingestion scripts for exchange rates, public holidays, and weekly promotions, plus notebooks for inspecting the historical Olist dataset and POS data.
@@ -30,18 +29,18 @@ Some folders and modules are placeholders for future work. Their presence does n
 ## Project structure
 
 ```text
-data-processing/                
+data-processing/              
 ├── data/
 │   ├── raw/
-│   │   ├── catalog/           
-│   │   └── promotions/       
-│   └── processed/             
+│   │   ├── catalog/         
+│   │   └── promotions/     
+│   └── processed/           
 ├── database/
 │   ├── migrations/                  # Alembic env + versions (0001_baseline)
 │   ├── schemas/pos/schema.sql       # Frozen baseline source for 0001
 │   └── seeds/                       # Placeholder for database seed scripts
 ├── docs/
-│   ├── adr/                  
+│   ├── adr/                
 │   ├── architecture/architecture.md
 │   ├── backlog_sprint_1.md
 │   └── bitacora/                    # Project investigation notes
@@ -61,7 +60,7 @@ data-processing/
 │   │   ├── holidays/main.py
 │   │   ├── inventory/                # consumer.py, adapter.py
 │   │   └── promotions/main.py
-│   ├── processing/          
+│   ├── processing/        
 │   ├── simulators/
 │   │   ├── inventory_api/           # api_seller.py, catalog_api.py, stock.py
 │   │   ├── marketplace_events/      # lifecycle.py, faults.py, producer.py
@@ -71,7 +70,7 @@ data-processing/
 │   │       ├── connection.py
 │   │       ├── exchange_rates.py
 │   │       └── main.py
-│   └── utils/              
+│   └── utils/            
 ├── tests/
 │   ├── integration/test_pos_seed.py
 │   └── unit/                        # 21 tests: promotions, catalog,
